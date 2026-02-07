@@ -1,0 +1,118 @@
+name: Score Submission
+
+on:
+  pull_request:
+    paths:
+      - 'submissions/inbox/**'
+
+jobs:
+  validate_and_score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Find submission directory
+        id: find_submission
+        run: |
+          # Find changed files in submissions/inbox/
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep "^submissions/inbox/" || true)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No submission files found"
+            exit 1
+          fi
+          
+          # Extract submission directory (e.g., submissions/inbox/team/run_001)
+          SUBMISSION_DIR=$(echo "$CHANGED_FILES" | head -1 | cut -d'/' -f1-4)
+          echo "submission_dir=$SUBMISSION_DIR" >> $GITHUB_OUTPUT
+          echo "Found submission: $SUBMISSION_DIR"
+
+      - name: Validate submission
+        id: validate
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'competition')
+          from validation import validate_submission, format_validation_result
+          
+          is_valid, errors, metadata = validate_submission(
+              '${{ steps.find_submission.outputs.submission_dir }}',
+              'data/public/test_nodes.csv'
+          )
+          
+          result = format_validation_result(is_valid, errors, metadata)
+          print(result)
+          
+          # Save for next step
+          with open('validation_result.txt', 'w') as f:
+              f.write(result)
+          
+          if not is_valid:
+              sys.exit(1)
+          "
+
+      - name: Decode test labels
+        if: success()
+        run: |
+          # Decode test labels from GitHub Secrets
+          echo "${{ secrets.TEST_LABELS_BASE64 }}" | base64 -d > test_labels.csv
+
+      - name: Score submission
+        if: success()
+        id: score
+        run: |
+          python competition/evaluate.py \
+            ${{ steps.find_submission.outputs.submission_dir }}/predictions.csv \
+            test_labels.csv \
+            --format markdown > score_result.txt
+          
+          cat score_result.txt
+
+      - name: Post comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = '## Submission Evaluation\n\n';
+            
+            // Add validation result
+            if (fs.existsSync('validation_result.txt')) {
+              comment += fs.readFileSync('validation_result.txt', 'utf8');
+            }
+            
+            // Add score if validation passed
+            if (fs.existsSync('score_result.txt')) {
+              comment += '\n\n';
+              comment += fs.readFileSync('score_result.txt', 'utf8');
+              comment += '\n\n---\n\n';
+              comment += '✅ **Submission is valid and scored!**\n\n';
+              comment += 'Once this PR is merged, your score will be added to the leaderboard.';
+            } else {
+              comment += '\n\n---\n\n';
+              comment += '❌ Please fix the errors above and update your submission.';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Clean up
+        if: always()
+        run: |
+          rm -f test_labels.csv validation_result.txt score_result.txt
