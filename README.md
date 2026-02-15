@@ -12,6 +12,8 @@ Bioprinting is an additive manufacturing process that functions similarly to 3D 
 
 The most common method is **Extrusion-based Bioprinting**, where a syringe-like printhead pushes bio-ink through a needle. Success depends on the perfect balance between material viscosity, cell viability, and the mechanical parameters of the printer.
 
+![Bioprinting Flow](assets/overall%20flow.png)
+
 ## 🍳 Think of Bioprinting Like Cooking (Seriously)
 If you’ve ever cooked a complex dish, you already understand the core problem in bioprinting. 
 
@@ -40,6 +42,8 @@ Each formulation is a graph $G_i = (V_i, E_i, X_i)$ where:
 - $X_i \in R^{n_i \times D}$: Node feature matrix (Dimension $D \approx 31$)
 
 Target $y_i \in R^3$: (pressure, temperature, speed)
+
+![Graph Data Structure](assets/graph%20data%20structure.png)
 
 ### 1️⃣ Adjacency Matrix (Mandatory)
 For formulation $i$ with $n$ materials:
