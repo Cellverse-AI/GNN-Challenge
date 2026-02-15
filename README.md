@@ -1,4 +1,5 @@
-#  Bioink parameters prediction using GNN 
+#  Learning Material Interaction Physics for identifying parameters of 3D Bioprinting
+
 
 A challenge for predicting 3D bioprinting parameters using Graph Neural Networks. 
 
