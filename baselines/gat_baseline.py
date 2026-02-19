@@ -20,9 +20,9 @@ class GAT(torch.nn.Module):
         self.conv2 = GATv2Conv(hidden_channels * heads, out_channels, heads=1, concat=False, dropout=0.2)
         
         self.regressor = torch.nn.Sequential(
-            torch.nn.Linear(out_channels, 64),
+            torch.nn.Linear(out_channels, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(64, 3)
+            torch.nn.Linear(32, 3)
         )
 
     def forward(self, x, edge_index, batch):
@@ -69,7 +69,7 @@ def train_and_eval():
     
     # 4. Training Loop
     print("Start Training (GATv2)...")
-    for epoch in range(1, 101):
+    for epoch in range(1, 300):
         model.train()
         total_loss = 0
         for data in train_loader:

@@ -50,11 +50,11 @@ def main():
     
     dim = train_dataset[0].x.shape[1]
     model = GCN(in_channels=dim, hidden_channels=64).to(DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     crit = torch.nn.L1Loss()
     
     print("Training GCN...")
-    for epoch in range(1, 101):
+    for epoch in range(1, 300):
         model.train()
         loss_all = 0
         for data in loader:

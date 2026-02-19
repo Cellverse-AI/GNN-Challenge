@@ -132,26 +132,30 @@ id,pressure,temperature,speed
 399,45.0,23.0,8.5
 ```
 
-### 4. Submit
+### 4. Submit (Secure)
 
-Create a folder structure:
+Since PRs are public, **you must encrypt your submission** to keep your predictions private.
 
-```
-submissions/inbox/<team_name>/
-└── predictions.csv
-```
+1.  **Encrypt your CSV**:
+    ```bash
+    python scripts/encrypt_submission.py predictions.csv --team YourTeamName
+    # Output: submission.enc (This file is safe to share)
+    ```
 
-Example: `submissions/inbox/TeamAlpha/predictions.csv`
+2.  **Upload to GitHub**:
+    Create a folder structure with your encrypted file:
+    ```
+    submissions/inbox/<YourTeamName>/
+    └── submission.enc
+    ```
 
-**Model types (for your reference in PR description):**
-- `human` — Designed by humans
-- `llm-only` — Generated entirely by LLM
-- `human+llm` — Collaborative design
+3.  **Open Pull Request**:
+    Target the `master` branch. The bot will decrypt it securely, score it, and close the PR.
 
 **Submission Policy (Strict)**
-- 🚨 **One Submission Only**: Each participant (GitHub user) is allowed exactly ONE submission. Subsequent submissions will be automatically rejected.
-- **Privacy**: Your PR is NOT merged. We score your submission privately and update the public leaderboard.
-- **Format**: Submit only `predictions.csv`. No code execution.
+- 🚨 **One Submission Only**: Each participant (GitHub user) is allowed exactly ONE submission.
+- **Privacy**: Your `submission.enc` is decrypted only by the scoring server. The plaintext CSV is never stored in the repo.
+- **Format**: Submit only `submission.enc`. Do NOT upload `predictions.csv`.
 
 ---
 

@@ -40,37 +40,36 @@ jobs:
       - name: Install dependencies
         run: pip install -r organizer_repo/requirements.txt
 
-      - name: Locate Submission
+      - name: Locate Encrypted Submission
         id: find_sub
         run: |
           python -c "
           import os, glob
           
-          # Look for predictions.csv in participant repo
-          # Use glob to find recursive paths
-          files = glob.glob('participant_repo/submissions/inbox/**/predictions.csv', recursive=True)
+          # Look for submission.enc in participant repo
+          files = glob.glob('participant_repo/submissions/inbox/**/submission.enc', recursive=True)
           if not files:
-              print('::error::No predictions.csv found in submissions/inbox!')
+              print('::error::No submission.enc found! Please run scripts/encrypt_submission.py before uploading.')
               exit(1)
               
-          pred_file = files[0]
-          # Get Team Name from folder structure: submissions/inbox/TEAM_NAME/predictions.csv
-          pred_file_norm = pred_file.replace('\\\\', '/')
-          parts = pred_file_norm.split('/')
+          enc_file = files[0]
+          
+          # Extract Team Name from folder structure: submissions/inbox/TEAM_NAME/submission.enc
+          path_norm = enc_file.replace('\\\\', '/')
+          parts = path_norm.split('/')
           try:
               inbox_idx = parts.index('inbox')
               team_name = parts[inbox_idx + 1]
           except:
               team_name = 'Unknown'
               
-          print(f'Found submission: {pred_file}')
+          print(f'Found submission: {enc_file}')
           print(f'Team: {team_name}')
           
-          # Absolute path for passing to other scripts
-          abs_path = os.path.abspath(pred_file)
+          abs_path = os.path.abspath(enc_file)
           
           with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-              fh.write(f'file_path={abs_path}\n')
+              fh.write(f'enc_path={abs_path}\n')
               fh.write(f'team_name={team_name}\n')
           "
 
@@ -113,22 +112,40 @@ jobs:
           fi
           echo "$TEST_LABELS_B64" | base64 -d > test_labels.csv
 
-      - name: Score Submission
+      - name: Decrypt Submission
+        env:
+          SUBMISSION_PRIVATE_KEY: ${{ secrets.SUBMISSION_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SUBMISSION_PRIVATE_KEY" ]; then
+            echo "::error::SUBMISSION_PRIVATE_KEY secret is missing!"
+            exit 1
+          fi
+          python organizer_repo/competition/decrypt_workflow.py "${{ steps.find_sub.outputs.enc_path }}"
+
+      - name: Score Decrypted CSV
         id: score
         run: |
+          if [ ! -f "predictions.csv" ]; then
+            echo "::error::predictions.csv not found (decryption failed)!"
+            exit 1
+          fi
+          
           # 1. Generate Markdown Report for Comment
           python organizer_repo/competition/evaluate.py \
-            "${{ steps.find_sub.outputs.file_path }}" \
+            "predictions.csv" \
             test_labels.csv \
             --format markdown > score_report.md
             
           # 2. Generate JSON Report for Leaderboard Update
           python organizer_repo/competition/evaluate.py \
-            "${{ steps.find_sub.outputs.file_path }}" \
+            "predictions.csv" \
             test_labels.csv \
             --format json > score_data.json
             
           cat score_report.md
+          
+          # Cleanup sensitive file immediately
+          rm predictions.csv
 
       - name: Update Leaderboard CSV
         if: success()
