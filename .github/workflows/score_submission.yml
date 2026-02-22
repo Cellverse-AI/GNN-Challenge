@@ -4,7 +4,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
-      - 'submissions/inbox/**'
+      - 'submissions/inbox/**/*.enc'
 
 permissions:
   contents: write    # Needed to push leaderboard.csv
@@ -46,10 +46,10 @@ jobs:
           python -c "
           import os, glob
           
-          # Look for submission.enc in participant repo
-          files = glob.glob('participant_repo/submissions/inbox/**/submission.enc', recursive=True)
+          # Look for any .enc file in participant repo
+          files = glob.glob('participant_repo/submissions/inbox/**/*.enc', recursive=True)
           if not files:
-              print('::error::No submission.enc found! Please run scripts/encrypt_submission.py before uploading.')
+              print('::error::No .enc file found! Please run scripts/encrypt_submission.py before uploading.')
               exit(1)
               
           enc_file = files[0]
