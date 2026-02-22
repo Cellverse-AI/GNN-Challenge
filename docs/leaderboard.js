@@ -175,17 +175,30 @@ function setupSorting() {
 
 async function main() {
   const status = document.getElementById("status");
+
+  // GitHub Raw URL — always live, updates immediately after workflow commits
+  const GITHUB_RAW_URL = "https://raw.githubusercontent.com/VinitSingroha/GNN-Challenge/master/leaderboard/leaderboard.csv";
+
   try {
     let rows;
 
-    // 1. Try embedded data (fastest, works offline/local)
-    if (window.LEADERBOARD_DATA) {
-      rows = window.LEADERBOARD_DATA;
-    }
-    // 2. Fallback to fetch (for legacy support or if JS unavailable)
-    else {
-      // Fetch colocated CSV
-      const res = await fetch("leaderboard.csv", { cache: "no-store" });
+    if (window.location.protocol === "file:") {
+      // Local / offline: use embedded JS data (no network)
+      if (window.LEADERBOARD_DATA && window.LEADERBOARD_DATA.length > 0) {
+        rows = window.LEADERBOARD_DATA;
+      } else {
+        status.innerHTML = `
+          <strong>Local preview:</strong> No embedded data found.<br><br>
+          Run <code>python competition/render_leaderboard.py</code> to generate it,
+          or open the page via GitHub Pages to see live data.
+        `;
+        return;
+      }
+    } else {
+      // GitHub Pages / web: fetch live CSV directly from GitHub Raw
+      status.textContent = "Loading latest leaderboard...";
+      const res = await fetch(GITHUB_RAW_URL + "?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const txt = await res.text();
       rows = parseCSV(txt);
     }
@@ -217,17 +230,7 @@ async function main() {
     applyFilters();
   } catch (e) {
     console.error(e);
-    if (window.location.protocol === "file:") {
-      status.innerHTML = `
-        <strong>Error: Cannot load leaderboard data directly from file system.</strong><br><br>
-        Browser security blocks fetch requests from <code>file://</code> URLs.<br>
-        To view locally, run a simple server:<br><br>
-        <code>python -m http.server</code><br><br>
-        Then open: <a href="http://localhost:8000/leaderboard.html">http://localhost:8000/leaderboard.html</a>
-      `;
-    } else {
-      status.textContent = "Failed to load leaderboard.csv. Check console for details.";
-    }
+    status.textContent = "Failed to load leaderboard data. Check console for details.";
   }
 }
 
