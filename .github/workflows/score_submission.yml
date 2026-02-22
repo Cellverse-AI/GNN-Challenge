@@ -200,10 +200,14 @@ jobs:
           cd organizer_repo
           git config user.name "Leaderboard Bot"
           git config user.email "bot@github.com"
-          git add leaderboard/leaderboard.csv
+
+          # Render leaderboard.md and docs/ from updated CSV
+          python competition/render_leaderboard.py
+
+          git add leaderboard/leaderboard.csv leaderboard/leaderboard.md docs/leaderboard.csv docs/leaderboard_data.js
           
           if git diff --staged --quiet; then
-            echo "No changes to leaderboard.csv"
+            echo "No changes to leaderboard"
           else
             git commit -m "Update leaderboard: ${{ steps.find_sub.outputs.team_name }} (@${{ github.actor }})"
             # Pull before push to handle race conditions
